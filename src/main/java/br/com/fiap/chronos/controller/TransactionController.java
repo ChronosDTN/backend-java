@@ -1,71 +1,74 @@
 package br.com.fiap.chronos.controller;
 
+import br.com.fiap.chronos.dto.StatusUpdateRequest;
 import br.com.fiap.chronos.dto.TransactionRequest;
-import br.com.fiap.chronos.model.TransactionBuffer;
-import br.com.fiap.chronos.repository.TransactionBufferRepository;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.ParameterMode;
-import jakarta.persistence.StoredProcedureQuery;
+import br.com.fiap.chronos.dto.TransactionResponse;
+import br.com.fiap.chronos.service.TransactionService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Controlador REST que expõe os endpoints para gerenciar e sincronizar transações cislunares.
+ * Controller REST que expõe os endpoints para gerenciar o ciclo de vida
+ * das transações financeiras cislunares no buffer DTN.
+ *
+ * <p>Delega toda a lógica de negócio para {@link TransactionService},
+ * limitando-se ao mapeamento HTTP e à montagem dos links HATEOAS.</p>
  */
 @RestController
 @RequestMapping("/api/transactions")
+@Tag(name = "Transações DTN", description = "Endpoints para gerenciamento do buffer de transações financeiras cislunar")
 public class TransactionController {
 
-    private final TransactionBufferRepository repository;
-    private final EntityManager entityManager;
+    private final TransactionService transactionService;
 
     /**
-     * Construtor para injeção manual das dependências do repositório e gerenciador de entidade.
+     * Construtor com injeção da camada de serviço via Spring IoC.
+     *
+     * @param transactionService serviço de regras de negócio das transações DTN
      */
-    public TransactionController(TransactionBufferRepository repository, EntityManager entityManager) {
-        this.repository = repository;
-        this.entityManager = entityManager;
+    public TransactionController(TransactionService transactionService) {
+        this.transactionService = transactionService;
     }
 
     /**
-     * Recebe uma transação, salva no buffer local e executa a procedure de correção de tempo relativístico.
+     * Recebe uma transação, persiste no buffer DTN e executa a procedure de correção
+     * relativística do timestamp lunar.
      */
+    @Operation(
+            summary = "Sincronizar transação cislunar",
+            description = "Registra uma nova transação no buffer DTN, executa a stored procedure " +
+                    "SP_CORRIGIR_TEMPO_LUNAR para correção relativística e retorna o estado final com links HATEOAS."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Transação sincronizada com sucesso",
+                    content = @Content(schema = @Schema(implementation = TransactionResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Dados de entrada inválidos"),
+            @ApiResponse(responseCode = "422", description = "Falha na validação dos campos obrigatórios"),
+            @ApiResponse(responseCode = "500", description = "Erro interno na execução da procedure")
+    })
     @PostMapping("/sync")
-    @Transactional
-    public ResponseEntity<EntityModel<TransactionBuffer>> syncTransaction(@Valid @RequestBody TransactionRequest request) {
-        TransactionBuffer buffer = new TransactionBuffer();
-        buffer.setSourceNode(request.sourceNode());
-        buffer.setTargetNode(request.targetNode());
-        buffer.setPayload(request.payload());
-        buffer.setLocalTimestamp(request.localTimestamp());
-        buffer.setSyncStatus("PENDING");
+    public ResponseEntity<EntityModel<TransactionResponse>> syncTransaction(
+            @Valid @RequestBody TransactionRequest request) {
 
-        TransactionBuffer savedBuffer = repository.save(buffer);
+        TransactionResponse response = transactionService.sincronizarTransacao(request);
 
-        StoredProcedureQuery query = entityManager.createStoredProcedureQuery("SP_CORRIGIR_TEMPO_LUNAR");
-        query.registerStoredProcedureParameter("p_id_tx", Long.class, ParameterMode.IN);
-        query.registerStoredProcedureParameter("p_status", String.class, ParameterMode.OUT);
-        query.setParameter("p_id_tx", savedBuffer.getIdTx());
-        query.execute();
-
-        String status = (String) query.getOutputParameterValue("p_status");
-        if (status != null && status.startsWith("ERROR")) {
-            throw new RuntimeException("Falha na correcao relativistica: " + status);
-        }
-
-        TransactionBuffer syncedBuffer = repository.findById(savedBuffer.getIdTx())
-                .orElseThrow(() -> new RuntimeException("Transacao nao encontrada apos execucao."));
-
-        EntityModel<TransactionBuffer> model = EntityModel.of(syncedBuffer);
+        EntityModel<TransactionResponse> model = EntityModel.of(response);
         model.add(WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(TransactionController.class)
-                .getTransactionById(syncedBuffer.getIdTx())).withSelfRel());
+                .getTransactionById(response.idTx())).withSelfRel());
         model.add(WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(TransactionController.class)
                 .getBufferTransactions(null)).withRel("buffer"));
 
@@ -73,40 +76,91 @@ public class TransactionController {
     }
 
     /**
-     * Recupera uma transação específica no buffer pelo seu identificador.
+     * Busca uma transação específica pelo seu identificador único.
      */
+    @Operation(
+            summary = "Buscar transação por ID",
+            description = "Recupera os dados completos de uma transação DTN pelo seu identificador. " +
+                    "Retorna 404 se a transação não existir."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Transação encontrada",
+                    content = @Content(schema = @Schema(implementation = TransactionResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Transação não encontrada")
+    })
     @GetMapping("/{id}")
-    public ResponseEntity<EntityModel<TransactionBuffer>> getTransactionById(@PathVariable Long id) {
-        TransactionBuffer buffer = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Transacao nao encontrada."));
+    public ResponseEntity<EntityModel<TransactionResponse>> getTransactionById(
+            @Parameter(description = "Identificador único da transação DTN", example = "1")
+            @PathVariable Long id) {
 
-        EntityModel<TransactionBuffer> model = EntityModel.of(buffer);
+        TransactionResponse response = transactionService.buscarPorId(id);
+
+        EntityModel<TransactionResponse> model = EntityModel.of(response);
         model.add(WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(TransactionController.class)
                 .getTransactionById(id)).withSelfRel());
+        model.add(WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(TransactionController.class)
+                .getBufferTransactions(null)).withRel("buffer"));
 
         return ResponseEntity.ok(model);
     }
 
     /**
-     * Lista todas as transações cadastradas no buffer, opcionalmente filtradas pelo status de sincronização.
+     * Lista todas as transações cadastradas no buffer, com filtro opcional por status.
      */
+    @Operation(
+            summary = "Listar transações do buffer",
+            description = "Retorna todas as transações DTN armazenadas no buffer. " +
+                    "Use o parâmetro opcional 'status' para filtrar por PENDING, SYNCED ou CANCELLED."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Lista retornada com sucesso")
+    })
     @GetMapping
-    public ResponseEntity<List<EntityModel<TransactionBuffer>>> getBufferTransactions(@RequestParam(required = false) String status) {
-        List<TransactionBuffer> list;
+    public ResponseEntity<List<EntityModel<TransactionResponse>>> getBufferTransactions(
+            @Parameter(description = "Filtro de status: PENDING | SYNCED | CANCELLED")
+            @RequestParam(required = false) String status) {
 
-        if (status != null) {
-            list = repository.findBySyncStatus(status);
-        } else {
-            list = repository.findAll();
-        }
-
-        List<EntityModel<TransactionBuffer>> models = list.stream().map(tx -> {
-            EntityModel<TransactionBuffer> model = EntityModel.of(tx);
-            model.add(WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(TransactionController.class)
-                    .getTransactionById(tx.getIdTx())).withSelfRel());
-            return model;
-        }).collect(Collectors.toList());
+        List<EntityModel<TransactionResponse>> models = transactionService.listarTransacoes(status)
+                .stream()
+                .map(tx -> {
+                    EntityModel<TransactionResponse> model = EntityModel.of(tx);
+                    model.add(WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(TransactionController.class)
+                            .getTransactionById(tx.idTx())).withSelfRel());
+                    return model;
+                })
+                .collect(Collectors.toList());
 
         return ResponseEntity.ok(models);
+    }
+
+    /**
+     * Atualiza parcialmente o status de sincronização de uma transação existente.
+     */
+    @Operation(
+            summary = "Atualizar status da transação (PATCH)",
+            description = "Evolui o status de sincronização de uma transação DTN. " +
+                    "Transições válidas: PENDING → SYNCED ou PENDING → CANCELLED. " +
+                    "Status terminais (SYNCED, CANCELLED) não podem ser alterados."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Status atualizado com sucesso",
+                    content = @Content(schema = @Schema(implementation = TransactionResponse.class))),
+            @ApiResponse(responseCode = "400", description = "Transição de status inválida ou status terminal"),
+            @ApiResponse(responseCode = "404", description = "Transação não encontrada"),
+            @ApiResponse(responseCode = "422", description = "Valor de status inválido")
+    })
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<EntityModel<TransactionResponse>> updateTransactionStatus(
+            @Parameter(description = "Identificador único da transação DTN", example = "1")
+            @PathVariable Long id,
+            @Valid @RequestBody StatusUpdateRequest request) {
+
+        TransactionResponse response = transactionService.atualizarStatus(id, request);
+
+        EntityModel<TransactionResponse> model = EntityModel.of(response);
+        model.add(WebMvcLinkBuilder.linkTo(WebMvcLinkBuilder.methodOn(TransactionController.class)
+                .getTransactionById(id)).withSelfRel());
+
+        return ResponseEntity.ok(model);
     }
 }
