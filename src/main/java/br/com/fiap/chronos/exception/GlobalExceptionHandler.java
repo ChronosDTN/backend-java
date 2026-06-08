@@ -89,6 +89,20 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
+    @ExceptionHandler(ProcedureExecutionException.class)
+    public ResponseEntity<ApiErrorResponse> handleProcedure(
+            ProcedureExecutionException ex, HttpServletRequest request) {
+
+        ApiErrorResponse body = new ApiErrorResponse(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Procedure Execution Error",
+                ex.getMessage(),
+                request.getRequestURI(),
+                LocalDateTime.now()
+        );
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    }
+
     /**
      * Fallback genérico para erros inesperados, retornando HTTP 500.
      * Garante que o cliente nunca receba a stack trace Java bruta.

@@ -163,4 +163,24 @@ public class TransactionController {
 
         return ResponseEntity.ok(model);
     }
+
+    /**
+     * Remove permanentemente uma transação do buffer DTN.
+     */
+    @Operation(
+            summary = "Excluir transação do buffer",
+            description = "Remove permanentemente uma transação DTN pelo seu identificador. Retorna 404 se não existir."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Transação removida com sucesso"),
+            @ApiResponse(responseCode = "404", description = "Transação não encontrada")
+    })
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteTransaction(
+            @Parameter(description = "Identificador único da transação DTN", example = "1")
+            @PathVariable Long id) {
+
+        transactionService.deletarTransacao(id);
+        return ResponseEntity.noContent().build();
+    }
 }

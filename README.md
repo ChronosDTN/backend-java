@@ -16,6 +16,15 @@ Projeto desenvolvido para a **Global Solution — FIAP 2026**.
 
 ---
 
+## 🔗 Links do Projeto
+
+| Item | Link |
+|---|---|
+| 🚀 **Deploy da API** | [https://SEU-DOMINIO.onrender.com](https://SEU-DOMINIO.onrender.com) |
+| 📖 **Swagger UI (online)** | [https://SEU-DOMINIO.onrender.com/swagger-ui.html](https://SEU-DOMINIO.onrender.com/swagger-ui.html) |
+| 🎥 **Vídeo de Apresentação** (até 10 min) | [Link YouTube / Google Drive]() |
+| 🎬 **Video Pitch** (até 3 min) | [Link YouTube / Google Drive]() |
+
 ## 🛰️ Sobre o Módulo
 
 Esta API representa o núcleo do sistema de liquidação interplanetário **Chronos DTN**. Ela gerencia o ciclo completo de uma transação cislunar: autenticação do operador, inserção no buffer de atraso tolerante, correção relativística do timestamp e atualização de status via PATCH.
