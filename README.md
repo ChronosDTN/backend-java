@@ -4,9 +4,21 @@
 
 ---
 
+## 👥 Integrantes do Grupo
+
+| Nome | RM |
+|---|---|
+| Charlles Fernandes | — |
+| Evellyn Ferreira | — |
+| Maicon Douglas | — |
+
+Projeto desenvolvido para a **Global Solution — FIAP 2026**.
+
+---
+
 ## 🛰️ Sobre o Módulo
 
-Esta API representa o núcleo do sistema de liquidação interplanetário **Chronos DTN**. Ela gerencia o ciclo completo de uma transação cislunar: autenticação do operador, inserção no buffer de atraso tolerante, correção relativística do timestamp e liquidação final no ledger.
+Esta API representa o núcleo do sistema de liquidação interplanetário **Chronos DTN**. Ela gerencia o ciclo completo de uma transação cislunar: autenticação do operador, inserção no buffer de atraso tolerante, correção relativística do timestamp e atualização de status via PATCH.
 
 O projeto utiliza autenticação **JWT Stateless**, **Spring Security**, **Spring Data JPA** com driver Oracle e documentação via **SpringDoc OpenAPI (Swagger UI)**.
 
@@ -35,16 +47,17 @@ backend-java/
 ├── src/
 │   └── main/
 │       ├── java/br/com/fiap/chronos/
-│       │   ├── controller/      # Controllers REST (endpoints públicos e protegidos)
-│       │   ├── domain/          # Entidades JPA mapeadas para o Oracle
-│       │   ├── dto/             # Data Transfer Objects (request/response)
-│       │   ├── repository/      # Interfaces Spring Data JPA
-│       │   ├── service/         # Regras de negócio e lógica de aplicação
-│       │   ├── security/        # Filtros JWT, UserDetailsService e configuração
-│       │   └── ChronosDtnApplication.java  # Ponto de entrada principal
+│       │   ├── controller/      # TransactionController (endpoints REST + HATEOAS)
+│       │   ├── dto/             # TransactionRequest, TransactionResponse, StatusUpdateRequest
+│       │   ├── exception/       # GlobalExceptionHandler, TransactionNotFoundException, ApiErrorResponse
+│       │   ├── model/           # TransactionBuffer (@Entity) + CislunarNodePair (@Embeddable)
+│       │   ├── repository/      # TransactionBufferRepository (Spring Data JPA)
+│       │   ├── security/        # JwtFilter, JwtUtil, SecurityConfig
+│       │   ├── service/         # TransactionService (regras de negócio)
+│       │   └── ChronosApplication.java
 │       └── resources/
-│           └── application.properties  # Configurações de datasource e JWT
-└── pom.xml                      # Dependências e configuração Maven
+│           └── application.properties
+└── pom.xml
 ```
 
 ---
@@ -57,15 +70,14 @@ backend-java/
 - [Apache Maven 3.x](https://maven.apache.org/) instalado
 - Oracle Database XE 21c em execução (use o módulo `devops/` com Docker Compose)
 
-### 1. Configurar o datasource
+### 1. Configurar variáveis de ambiente
 
-Edite o arquivo `src/main/resources/application.properties`:
+```bash
+# Chave secreta do JWT (mínimo 64 caracteres)
+export JWT_SECRET="ChronosDTNInterplanetaryKeySecure2026EncryptionSignatureHashHex"
 
-```properties
-spring.datasource.url=jdbc:oracle:thin:@localhost:1521/CHRONOS_DB
-spring.datasource.username=system
-spring.datasource.password=ChronosSecurePassword2026
-spring.jpa.database-platform=org.hibernate.dialect.OracleDialect
+# Senha do banco Oracle (opcional se usar o padrão do devops/)
+export CHRONOS_DB_PASSWORD="ChronosSecurePassword2026"
 ```
 
 ### 2. Compilar e executar
@@ -83,31 +95,46 @@ http://localhost:8080/swagger-ui.html
 
 ---
 
-## 🔐 Autenticação
+## 📡 Endpoints da API
 
-A API usa **JWT Bearer Token**. Para acessar endpoints protegidos:
+| Método | Endpoint | Descrição |
+|---|---|---|
+| `POST` | `/api/transactions/sync` | Sincroniza nova transação cislunar e executa correção relativística |
+| `GET` | `/api/transactions` | Lista todas as transações (filtro opcional: `?status=PENDING`) |
+| `GET` | `/api/transactions/{id}` | Busca uma transação específica pelo ID |
+| `PATCH` | `/api/transactions/{id}/status` | Atualiza o status: PENDING → SYNCED \| CANCELLED |
 
-1. Faça `POST /api/auth/login` com credenciais válidas.
-2. Copie o token retornado no campo `token`.
-3. Inclua no header de todas as requisições protegidas:
-   ```
-   Authorization: Bearer <seu_token>
-   ```
+---
+
+## 🔐 Autenticação JWT
+
+A API usa **JWT Bearer Token** para autenticação. O token é gerado via `JwtUtil.generateToken()` e injetado no header:
+
+```
+Authorization: Bearer <seu_token>
+```
+
+> **Nota de segurança:** O secret JWT é lido da variável de ambiente `JWT_SECRET` em produção, nunca hardcoded no código-fonte.
+
+---
+
+## 🏗️ Destaques Arquiteturais
+
+- **`@Embeddable CislunarNodePair`** — par origem/destino encapsulado como objeto de valor JPA na mesma tabela
+- **`TransactionService`** — camada de serviço isolando regras de negócio do Controller (SRP)
+- **`GlobalExceptionHandler`** — `@RestControllerAdvice` com mapeamento 404/422/400/500
+- **`TransactionResponse`** — DTO de resposta Record separando contrato da API da entidade JPA
+- **`HATEOAS`** — todos os endpoints retornam `EntityModel` com links de navegação
 
 ---
 
 ## 🔗 Repositórios do Projeto Chronos DTN
 
-| Módulo | Descrição |
+| Módulo | Repositório |
 |---|---|
-| [backend-dotnet](https://github.com/seu-usuario/chronos-backend-dotnet) | API secundária .NET 8 + EF Core |
-| [database](https://github.com/seu-usuario/chronos-database) | Scripts Oracle SQL e Procedure PL/SQL |
-| [devops](https://github.com/seu-usuario/chronos-devops) | Docker Compose e Dockerfile |
-| [iot-esp32](https://github.com/seu-usuario/chronos-iot-esp32) | Firmware C++ Arduino para ESP32 |
-| [mobile-app](https://github.com/seu-usuario/chronos-mobile-app) | App React Native com Expo Router |
-
----
-
-## 👤 Autores
-
-Projeto desenvolvido para a **Global Solution — FIAP 2026**.
+| **backend-java** (este) | [ChronosDTN/backend-java](https://github.com/ChronosDTN/backend-java) |
+| **backend-dotnet** | [ChronosDTN/backend-dotnet](https://github.com/ChronosDTN/backend-dotnet) |
+| **database** | [ChronosDTN/database](https://github.com/ChronosDTN/database) |
+| **devops** | [ChronosDTN/devops](https://github.com/ChronosDTN/devops) |
+| **iot-esp32** | [ChronosDTN/iot-esp32](https://github.com/ChronosDTN/iot-esp32) |
+| **mobile-app2** | [ChronosDTN/mobile-app2](https://github.com/ChronosDTN/mobile-app2) |
