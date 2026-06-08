@@ -4,131 +4,106 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
- * Entidade que representa o buffer de transações a serem sincronizadas com a Terra.
+ * Entidade JPA que representa o buffer de transações financeiras cislunares
+ * aguardando sincronização com o nó Terra via protocolo DTN store-and-forward.
+ *
+ * <p>Utiliza {@code @Embedded} com {@link CislunarNodePair} para agrupar
+ * os identificadores de nó como objeto de valor, conforme modelagem avançada JPA.</p>
  */
 @Entity
 @Table(name = "T_CDTN_TRANSACTION_BUFFER")
 public class TransactionBuffer {
 
+    /**
+     * Identificador único gerado automaticamente pelo banco de dados.
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_tx")
     private Long idTx;
 
-    @Column(name = "source_node", nullable = false)
-    private Long sourceNode;
+    /**
+     * Par de nós cislunar (origem e destino) encapsulado como objeto de valor embeddable.
+     * As colunas source_node e target_node ficam na mesma tabela T_CDTN_TRANSACTION_BUFFER.
+     */
+    @Embedded
+    private CislunarNodePair nodePair;
 
-    @Column(name = "target_node", nullable = false)
-    private Long targetNode;
-
+    /**
+     * Carga de dados JSON com detalhes financeiros da transação (moeda, valor, ledger hash).
+     */
     @Column(name = "payload", length = 4000, nullable = false)
     private String payload;
 
+    /**
+     * Timestamp local registrado no momento da criação da transação no nó lunar.
+     * Será corrigido relativisticamente pela procedure SP_CORRIGIR_TEMPO_LUNAR.
+     */
     @Column(name = "local_timestamp", nullable = false)
     private LocalDateTime localTimestamp;
 
+    /**
+     * Status atual de sincronização no ciclo DTN: PENDING → SYNCED | CANCELLED.
+     */
     @Column(name = "sync_status", length = 20, nullable = false)
     private String syncStatus = "PENDING";
 
     /**
      * Construtor padrão necessário para a especificação JPA.
      */
-    public TransactionBuffer() {
-    }
+    public TransactionBuffer() {}
 
     /**
      * Construtor completo para criação direta de instâncias com todos os dados.
+     *
+     * @param idTx           identificador único
+     * @param nodePair       par de nós origem/destino
+     * @param payload        dados JSON da transação
+     * @param localTimestamp timestamp lunar de criação
+     * @param syncStatus     status de sincronização inicial
      */
-    public TransactionBuffer(Long idTx, Long sourceNode, Long targetNode, String payload, LocalDateTime localTimestamp, String syncStatus) {
+    public TransactionBuffer(Long idTx, CislunarNodePair nodePair, String payload,
+                             LocalDateTime localTimestamp, String syncStatus) {
         this.idTx = idTx;
-        this.sourceNode = sourceNode;
-        this.targetNode = targetNode;
+        this.nodePair = nodePair;
         this.payload = payload;
         this.localTimestamp = localTimestamp;
         this.syncStatus = syncStatus;
     }
 
-    /**
-     * Recupera o identificador único da transação.
-     */
-    public Long getIdTx() {
-        return idTx;
-    }
+    /** Retorna o identificador único da transação. */
+    public Long getIdTx() { return idTx; }
 
-    /**
-     * Seta o identificador único da transação.
-     */
-    public void setIdTx(Long idTx) {
-        this.idTx = idTx;
-    }
+    /** Define o identificador único da transação. */
+    public void setIdTx(Long idTx) { this.idTx = idTx; }
 
-    /**
-     * Recupera o identificador do nó de origem da transação.
-     */
-    public Long getSourceNode() {
-        return sourceNode;
-    }
+    /** Retorna o par de nós cislunar (origem e destino). */
+    public CislunarNodePair getNodePair() { return nodePair; }
 
-    /**
-     * Seta o identificador do nó de origem da transação.
-     */
-    public void setSourceNode(Long sourceNode) {
-        this.sourceNode = sourceNode;
-    }
+    /** Define o par de nós cislunar (origem e destino). */
+    public void setNodePair(CislunarNodePair nodePair) { this.nodePair = nodePair; }
 
-    /**
-     * Recupera o identificador do nó de destino.
-     */
-    public Long getTargetNode() {
-        return targetNode;
-    }
+    /** Atalho de conveniência para obter o nó de origem a partir do nodePair embeddable. */
+    public Long getSourceNode() { return nodePair != null ? nodePair.getSourceNode() : null; }
 
-    /**
-     * Seta o identificador do nó de destino.
-     */
-    public void setTargetNode(Long targetNode) {
-        this.targetNode = targetNode;
-    }
+    /** Atalho de conveniência para obter o nó de destino a partir do nodePair embeddable. */
+    public Long getTargetNode() { return nodePair != null ? nodePair.getTargetNode() : null; }
 
-    /**
-     * Recupera a carga de dados JSON contendo as informações da transação.
-     */
-    public String getPayload() {
-        return payload;
-    }
+    /** Retorna a carga de dados JSON da transação. */
+    public String getPayload() { return payload; }
 
-    /**
-     * Seta a carga de dados JSON contendo as informações da transação.
-     */
-    public void setPayload(String payload) {
-        this.payload = payload;
-    }
+    /** Define a carga de dados JSON da transação. */
+    public void setPayload(String payload) { this.payload = payload; }
 
-    /**
-     * Recupera a data e hora em que a transação foi registrada.
-     */
-    public LocalDateTime getLocalTimestamp() {
-        return localTimestamp;
-    }
+    /** Retorna o timestamp local de criação no nó lunar. */
+    public LocalDateTime getLocalTimestamp() { return localTimestamp; }
 
-    /**
-     * Seta a data e hora em que a transação foi registrada.
-     */
-    public void setLocalTimestamp(LocalDateTime localTimestamp) {
-        this.localTimestamp = localTimestamp;
-    }
+    /** Define o timestamp local de criação no nó lunar. */
+    public void setLocalTimestamp(LocalDateTime localTimestamp) { this.localTimestamp = localTimestamp; }
 
-    /**
-     * Recupera o status de sincronização no buffer.
-     */
-    public String getSyncStatus() {
-        return syncStatus;
-    }
+    /** Retorna o status atual de sincronização DTN. */
+    public String getSyncStatus() { return syncStatus; }
 
-    /**
-     * Seta o status de sincronização no buffer.
-     */
-    public void setSyncStatus(String syncStatus) {
-        this.syncStatus = syncStatus;
-    }
+    /** Define o status de sincronização DTN. */
+    public void setSyncStatus(String syncStatus) { this.syncStatus = syncStatus; }
 }
