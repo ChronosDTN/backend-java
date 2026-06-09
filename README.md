@@ -20,12 +20,22 @@ Projeto desenvolvido para a **Global Solution — FIAP 2026**.
 
 | Item | Link |
 |---|---|
-| 🚀 **Deploy da API** | https://backend-java-xw8j.onrender.com/swagger-ui.html |
-| 📖 **Swagger UI (online)** | Em breve |
+| 🚀 **Deploy da API** | https://backend-java-xw8j.onrender.com |
+| 📖 **Swagger UI (online)** | https://backend-java-xw8j.onrender.com/swagger-ui/index.html |
 | 🎥 **Vídeo de Apresentação** (até 10 min) | Em breve |
 | 🎬 **Video Pitch** (até 3 min) | Em breve |
 
 ---
+
+## ▶️ Instruções de Execução
+
+Para executar o projeto localmente, é necessário ter o **Java 21 JDK**, o **Apache Maven 3.x** e uma instância do **Oracle Database** em execução.
+
+Após configurar as variáveis de ambiente necessárias, a aplicação pode ser iniciada com o comando:
+
+```bash
+mvn spring-boot:run
+```
 
 ## 🛰️ Sobre o Módulo
 
