@@ -8,10 +8,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityScheme;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * Configuração global do OpenAPI que habilita o botão "Authorize"
- * no Swagger UI para envio do Bearer Token JWT.
- */
+
 @Configuration
 @OpenAPIDefinition(
         info = @Info(
