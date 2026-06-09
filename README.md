@@ -6,11 +6,11 @@
 
 ## 👥 Integrantes do Grupo
 
-| Nome | RM |
-|---|---|
-| Charlles Fernandes | — |
-| Evellyn Ferreira | — |
-| Maicon Douglas | — |
+| Nome              | RM     |
+|-------------------|--------|
+| Evellyn Ferreira  | 562744 |
+| Fernando Charlles | 566482 |
+| Maicon Douglas    | 561279 |
 
 Projeto desenvolvido para a **Global Solution — FIAP 2026**.
 
