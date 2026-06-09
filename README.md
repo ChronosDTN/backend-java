@@ -1,6 +1,6 @@
 # Chronos DTN — API Principal (Java Spring Boot 3)
 
-> Módulo de API REST principal do gateway financeiro **Chronos DTN**, responsável pelo roteamento de transações financeiras cislunar, autenticação JWT, controle de buffer DTN e exposição dos endpoints de telemetria. Construído em **Java 21** com **Spring Boot 3.2** e conectado ao Oracle Database XE 21c.
+> Módulo de API REST principal do gateway financeiro **Chronos DTN**, responsável pelo roteamento de transações financeiras cislunares, autenticação JWT, controle de buffer DTN e exposição dos recursos via arquitetura REST + HATEOAS.
 
 ---
 
@@ -20,16 +20,18 @@ Projeto desenvolvido para a **Global Solution — FIAP 2026**.
 
 | Item | Link |
 |---|---|
-| 🚀 **Deploy da API** | [https://SEU-DOMINIO.onrender.com](https://SEU-DOMINIO.onrender.com) |
-| 📖 **Swagger UI (online)** | [https://SEU-DOMINIO.onrender.com/swagger-ui.html](https://SEU-DOMINIO.onrender.com/swagger-ui.html) |
-| 🎥 **Vídeo de Apresentação** (até 10 min) | [Link YouTube / Google Drive]() |
-| 🎬 **Video Pitch** (até 3 min) | [Link YouTube / Google Drive]() |
+| 🚀 **Deploy da API** | Em breve |
+| 📖 **Swagger UI (online)** | Em breve |
+| 🎥 **Vídeo de Apresentação** (até 10 min) | Em breve |
+| 🎬 **Video Pitch** (até 3 min) | Em breve |
+
+---
 
 ## 🛰️ Sobre o Módulo
 
-Esta API representa o núcleo do sistema de liquidação interplanetário **Chronos DTN**. Ela gerencia o ciclo completo de uma transação cislunar: autenticação do operador, inserção no buffer de atraso tolerante, correção relativística do timestamp e atualização de status via PATCH.
+Esta API representa o núcleo do sistema de liquidação interplanetário **Chronos DTN**. Ela gerencia o ciclo completo de uma transação cislunar: autenticação do operador via JWT, inserção no buffer DTN, correção relativística do timestamp lunar via stored procedure Oracle, e atualização do ciclo de vida da transação.
 
-O projeto utiliza autenticação **JWT Stateless**, **Spring Security**, **Spring Data JPA** com driver Oracle e documentação via **SpringDoc OpenAPI (Swagger UI)**.
+O projeto utiliza autenticação **JWT Stateless**, **Spring Security**, **Spring Data JPA** com driver Oracle, **Lombok** para redução de boilerplate e documentação interativa via **SpringDoc OpenAPI (Swagger UI)**.
 
 ---
 
@@ -42,30 +44,58 @@ O projeto utiliza autenticação **JWT Stateless**, **Spring Security**, **Sprin
 | Spring Security | 6.x | Autenticação e autorização JWT |
 | Spring Data JPA | 3.x | ORM e acesso ao banco de dados |
 | Spring HATEOAS | 2.x | Navegabilidade hipermídia dos recursos REST |
+| Lombok | 1.18.x | Redução de boilerplate (getters, setters, construtores) |
 | JJWT | 0.12.5 | Geração e validação de tokens JWT |
 | SpringDoc OpenAPI | 2.5.0 | Documentação interativa Swagger UI |
 | Oracle JDBC (ojdbc11) | runtime | Driver oficial de conexão com Oracle DB |
+| Spring Boot DevTools | runtime | Produtividade em desenvolvimento (hot reload) |
 | Maven | 3.x | Gerenciador de dependências e build |
 
 ---
 
 ## 📂 Estrutura de Pastas
 
-```
+```text
 backend-java/
 ├── src/
 │   └── main/
 │       ├── java/br/com/fiap/chronos/
-│       │   ├── controller/      # TransactionController (endpoints REST + HATEOAS)
-│       │   ├── dto/             # TransactionRequest, TransactionResponse, StatusUpdateRequest
-│       │   ├── exception/       # GlobalExceptionHandler, TransactionNotFoundException, ApiErrorResponse
-│       │   ├── model/           # TransactionBuffer (@Entity) + CislunarNodePair (@Embeddable)
-│       │   ├── repository/      # TransactionBufferRepository (Spring Data JPA)
-│       │   ├── security/        # JwtFilter, JwtUtil, SecurityConfig
-│       │   ├── service/         # TransactionService (regras de negócio)
+│       │   ├── config/
+│       │   │   └── OpenApiConfig.java
+│       │   ├── controller/
+│       │   │   ├── AuthController.java
+│       │   │   └── TransactionController.java
+│       │   ├── dto/
+│       │   │   ├── AuthRequest.java
+│       │   │   ├── AuthResponse.java
+│       │   │   ├── StatusUpdateRequest.java
+│       │   │   ├── TransactionRequest.java
+│       │   │   └── TransactionResponse.java
+│       │   ├── exception/
+│       │   │   ├── ApiErrorResponse.java
+│       │   │   ├── GlobalExceptionHandler.java
+│       │   │   ├── ProcedureExecutionException.java
+│       │   │   └── TransactionNotFoundException.java
+│       │   ├── model/
+│       │   │   ├── BaseEntity.java
+│       │   │   ├── CislunarNodePair.java
+│       │   │   ├── NodeRoute.java
+│       │   │   ├── NodeRouteId.java
+│       │   │   └── TransactionBuffer.java
+│       │   ├── repository/
+│       │   │   ├── NodeRouteRepository.java
+│       │   │   └── TransactionBufferRepository.java
+│       │   ├── security/
+│       │   │   ├── JwtFilter.java
+│       │   │   ├── JwtUtil.java
+│       │   │   └── SecurityConfig.java
+│       │   ├── service/
+│       │   │   └── TransactionService.java
 │       │   └── ChronosApplication.java
 │       └── resources/
 │           └── application.properties
+├── .gitignore
+├── README.md
 └── pom.xml
 ```
 
@@ -77,7 +107,7 @@ backend-java/
 
 - [Java 21 JDK](https://adoptium.net/) instalado e configurado no `JAVA_HOME`
 - [Apache Maven 3.x](https://maven.apache.org/) instalado
-- Oracle Database XE 21c em execução (use o módulo `devops/` com Docker Compose)
+- Oracle Database XE 21c em execução
 
 ### 1. Configurar variáveis de ambiente
 
@@ -85,8 +115,12 @@ backend-java/
 # Chave secreta do JWT (mínimo 64 caracteres)
 export JWT_SECRET="ChronosDTNInterplanetaryKeySecure2026EncryptionSignatureHashHex"
 
-# Senha do banco Oracle (opcional se usar o padrão do devops/)
+# Senha do banco Oracle
 export CHRONOS_DB_PASSWORD="ChronosSecurePassword2026"
+
+# URL e usuário do banco em produção
+export SPRING_DATASOURCE_URL="jdbc:oracle:thin:@localhost:1521/CHRONOS_DB"
+export SPRING_DATASOURCE_USERNAME="system"
 ```
 
 ### 2. Compilar e executar
@@ -98,7 +132,7 @@ mvn spring-boot:run
 
 ### 3. Acessar a documentação Swagger UI
 
-```
+```text
 http://localhost:8080/swagger-ui.html
 ```
 
@@ -106,34 +140,119 @@ http://localhost:8080/swagger-ui.html
 
 ## 📡 Endpoints da API
 
-| Método | Endpoint | Descrição |
-|---|---|---|
-| `POST` | `/api/transactions/sync` | Sincroniza nova transação cislunar e executa correção relativística |
-| `GET` | `/api/transactions` | Lista todas as transações (filtro opcional: `?status=PENDING`) |
-| `GET` | `/api/transactions/{id}` | Busca uma transação específica pelo ID |
-| `PATCH` | `/api/transactions/{id}/status` | Atualiza o status: PENDING → SYNCED \| CANCELLED |
+| Método | Endpoint | Descrição | Autenticação |
+|---|---|---|---|
+| `POST` | `/api/auth/token` | Gera Bearer Token JWT para autenticação | Público |
+| `POST` | `/api/transactions/sync` | Sincroniza nova transação cislunar e executa correção relativística | 🔒 JWT |
+| `GET` | `/api/transactions` | Lista todas as transações (filtro opcional: `?status=PENDING`) | 🔒 JWT |
+| `GET` | `/api/transactions/{id}` | Busca uma transação específica pelo ID | 🔒 JWT |
+| `PATCH` | `/api/transactions/{id}/status` | Atualiza o status da transação | 🔒 JWT |
+| `DELETE` | `/api/transactions/{id}` | Remove permanentemente uma transação do buffer | 🔒 JWT |
 
 ---
 
 ## 🔐 Autenticação JWT
 
-A API usa **JWT Bearer Token** para autenticação. O token é gerado via `JwtUtil.generateToken()` e injetado no header:
+Todos os endpoints `/api/transactions/**` exigem autenticação via **Bearer Token JWT**.
 
-```
-Authorization: Bearer <seu_token>
+### 1. Obter o token
+
+```http
+POST /api/auth/token
+Content-Type: application/json
+
+{
+  "username": "operador",
+  "password": "Chronos2026!"
+}
 ```
 
-> **Nota de segurança:** O secret JWT é lido da variável de ambiente `JWT_SECRET` em produção, nunca hardcoded no código-fonte.
+### Resposta esperada
+
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9...",
+  "type": "Bearer"
+}
+```
+
+### 2. Usar o token nas requisições
+
+```http
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
+```
+
+### 3. Usar no Swagger UI
+
+No Swagger UI, clique em **Authorize** 🔒, cole o token no campo `bearerAuth` e confirme. Todas as chamadas seguintes enviarão o token automaticamente.
+
+> **Nota de segurança:** O segredo JWT é lido da variável de ambiente `JWT_SECRET` em produção, nunca hardcoded no código-fonte.
 
 ---
 
 ## 🏗️ Destaques Arquiteturais
 
-- **`@Embeddable CislunarNodePair`** — par origem/destino encapsulado como objeto de valor JPA na mesma tabela
-- **`TransactionService`** — camada de serviço isolando regras de negócio do Controller (SRP)
-- **`GlobalExceptionHandler`** — `@RestControllerAdvice` com mapeamento 404/422/400/500
-- **`TransactionResponse`** — DTO de resposta Record separando contrato da API da entidade JPA
-- **`HATEOAS`** — todos os endpoints retornam `EntityModel` com links de navegação
+### Modelagem Avançada JPA
+- **`BaseEntity` (`@MappedSuperclass`)** — herança JPA com campos de auditoria `createdAt` e `updatedAt`
+- **`CislunarNodePair` (`@Embeddable`)** — par origem/destino encapsulado como objeto de valor
+- **`NodeRouteId` (`@Embeddable`)** — chave composta usada via `@EmbeddedId`
+- **`NodeRoute` (`@Entity`)** — segunda tabela do domínio, demonstrando múltiplas entidades e chave composta
+
+### Segurança
+- **`SecurityConfig`** — sessão STATELESS, CSRF desabilitado e CORS configurado
+- **`JwtFilter`** — `OncePerRequestFilter` para validação do Bearer Token
+- **`JwtUtil`** — geração e validação de JWT com JJWT 0.12.5
+
+### Arquitetura REST
+- **`TransactionService`** — camada de serviço com regras de negócio e chamada à stored procedure `SP_CORRIGIR_TEMPO_LUNAR`
+- **`GlobalExceptionHandler`** — `@RestControllerAdvice` com respostas padronizadas de erro
+- **`HATEOAS`** — endpoints retornam `EntityModel` com links de navegação
+- **`OpenApiConfig`** — habilita o botão **Authorize** no Swagger UI com esquema `bearerAuth`
+
+---
+
+## 🧪 Como Testar a API
+
+### 1. Gerar token
+Use o endpoint:
+
+```http
+POST /api/auth/token
+```
+
+### 2. Autorizar no Swagger
+- abrir `/swagger-ui.html`
+- clicar em **Authorize**
+- colar o token JWT
+
+### 3. Testar fluxo principal
+1. `POST /api/transactions/sync`
+2. `GET /api/transactions`
+3. `GET /api/transactions/{id}`
+4. `PATCH /api/transactions/{id}/status`
+5. `DELETE /api/transactions/{id}`
+
+---
+
+## 🌐 Deploy
+
+Para disponibilizar a API externamente, o caminho recomendado é:
+
+- **API Spring Boot**: Railway ou Render
+- **Banco Oracle**: Oracle Cloud Free Tier ou outra instância Oracle acessível externamente
+
+### Variáveis recomendadas para produção
+
+```env
+PORT=8080
+JWT_SECRET=sua_chave_forte
+SPRING_DATASOURCE_URL=jdbc:oracle:thin:@SEU_HOST:1521/SEU_SERVICO
+SPRING_DATASOURCE_USERNAME=system
+CHRONOS_DB_PASSWORD=sua_senha
+SPRING_DATASOURCE_DRIVER_CLASS_NAME=oracle.jdbc.OracleDriver
+SPRING_JPA_DATABASE_PLATFORM=org.hibernate.dialect.OracleDialect
+SPRING_JPA_HIBERNATE_DDL_AUTO=none
+```
 
 ---
 
