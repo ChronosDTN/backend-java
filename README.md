@@ -27,16 +27,6 @@ Projeto desenvolvido para a **Global Solution — FIAP 2026**.
 
 ---
 
-## ▶️ Instruções de Execução
-
-Para executar o projeto localmente, é necessário ter o **Java 21 JDK**, o **Apache Maven 3.x** e uma instância do **Oracle Database** em execução.
-
-Após configurar as variáveis de ambiente necessárias, a aplicação pode ser iniciada com o comando:
-
-```bash
-mvn spring-boot:run
-```
-
 ## 🛰️ Sobre o Módulo
 
 Esta API representa o núcleo do sistema de liquidação interplanetário **Chronos DTN**. Ela gerencia o ciclo completo de uma transação cislunar: autenticação do operador via JWT, inserção no buffer DTN, correção relativística do timestamp lunar via stored procedure Oracle, e atualização do ciclo de vida da transação.
