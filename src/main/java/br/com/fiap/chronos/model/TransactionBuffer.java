@@ -6,10 +6,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
-/**
- * Entidade JPA que representa o buffer de transações financeiras cislunares.
- * Utiliza @Embedded com CislunarNodePair para modelagem avançada JPA.
- */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

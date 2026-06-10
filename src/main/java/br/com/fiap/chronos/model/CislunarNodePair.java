@@ -7,10 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.io.Serializable;
 
-/**
- * Objeto de valor embeddable que agrupa os identificadores dos nós
- * de origem e destino de uma transação cislunar.
- */
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

@@ -4,10 +4,6 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import java.time.LocalDateTime;
 
-/**
- * Classe base de auditoria herdada por todas as entidades do domínio.
- * Utiliza @MappedSuperclass para implementar herança JPA sem tabela própria.
- */
 @Getter
 @MappedSuperclass
 public abstract class BaseEntity {

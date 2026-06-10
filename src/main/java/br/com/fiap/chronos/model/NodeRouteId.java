@@ -7,11 +7,6 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.io.Serializable;
 
-/**
- * Chave composta da entidade NodeRoute, identificando unicamente
- * uma rota por par (sourceNode, targetNode).
- * Implementa @Embeddable para uso como @EmbeddedId.
- */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

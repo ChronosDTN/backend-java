@@ -5,11 +5,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * Entidade JPA que representa a tabela de rotas entre nós da rede DTN.
- * Utiliza chave composta @EmbeddedId (NodeRouteId) e herda de BaseEntity.
- * Segunda tabela do domínio, comprovando modelagem com múltiplas entidades.
- */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
