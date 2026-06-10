@@ -118,7 +118,7 @@ public class GlobalExceptionHandler {
         ApiErrorResponse body = new ApiErrorResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "Internal Server Error",
-                "Erro interno do gateway DTN. Contate o operador cislunar.",
+                "Debug Erro: " + ex.getMessage(),
                 request.getRequestURI(),
                 LocalDateTime.now()
         );
