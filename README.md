@@ -23,7 +23,7 @@ Projeto desenvolvido para a **Global Solution — FIAP 2026**.
 | 🚀 **Deploy da API** | https://backend-java-xw8j.onrender.com |
 | 📖 **Swagger UI (online)** | https://backend-java-xw8j.onrender.com/swagger-ui/index.html |
 | 🎥 **Vídeo de Apresentação** (até 10 min) | Em breve |
-| 🎬 **Video Pitch** (até 3 min) | Em breve |
+| 🎬 **Video Pitch**  | https://youtu.be/Ih94mSE1dzc?si=Qwk6nfn1f57bnD0Y |
 
 ---
 
