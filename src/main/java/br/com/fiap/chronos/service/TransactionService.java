@@ -59,25 +59,26 @@ public class TransactionService {
 
         TransactionBuffer saved = repository.save(buffer);
 
-        try {
-            StoredProcedureQuery query = entityManager
-                    .createStoredProcedureQuery("SP_CORRIGIR_TEMPO_LUNAR");
-            query.registerStoredProcedureParameter("p_id_tx", Long.class, ParameterMode.IN);
-            query.registerStoredProcedureParameter("p_status", String.class, ParameterMode.OUT);
-            query.setParameter("p_id_tx", saved.getIdTx());
-            query.execute();
+        // --- INÍCIO DA CHAMADA DE PROCEDURE (ORACLE) ---
+        // Comentado para o deploy na nuvem (Render/PostgreSQL) pois a procedure existe apenas no Oracle local.
+        /*
+        StoredProcedureQuery query = entityManager
+                .createStoredProcedureQuery("SP_CORRIGIR_TEMPO_LUNAR");
+        query.registerStoredProcedureParameter("p_id_tx", Long.class, ParameterMode.IN);
+        query.registerStoredProcedureParameter("p_status", String.class, ParameterMode.OUT);
+        query.setParameter("p_id_tx", saved.getIdTx());
+        query.execute();
 
-            String statusProcedure = (String) query.getOutputParameterValue("p_status");
-            if (statusProcedure != null && statusProcedure.startsWith("ERROR")) {
-                throw new ProcedureExecutionException(statusProcedure);
-            }
-        } catch (Exception e) {
-            // Ignora o erro se a Procedure do Oracle não existir no PostgreSQL em nuvem
-            System.err.println("Aviso: Procedure não executada no ambiente atual: " + e.getMessage());
-            // Simula a alteração no código para o demo
-            saved.setLocalTimestamp(saved.getLocalTimestamp().plusSeconds(1));
-            repository.save(saved);
+        String statusProcedure = (String) query.getOutputParameterValue("p_status");
+        if (statusProcedure != null && statusProcedure.startsWith("ERROR")) {
+            throw new ProcedureExecutionException(statusProcedure);
         }
+        */
+        // --- FIM DA CHAMADA DE PROCEDURE ---
+
+        // Simula a alteração no código para o demo online
+        saved.setLocalTimestamp(saved.getLocalTimestamp().plusSeconds(1));
+        repository.save(saved);
 
         TransactionBuffer syncronizado = repository.findById(saved.getIdTx())
                 .orElseThrow(() -> new TransactionNotFoundException(saved.getIdTx()));
